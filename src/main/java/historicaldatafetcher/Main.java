@@ -15,12 +15,12 @@ public class Main {
 
 	public static void main(String[] args) throws Exception {
 		ApiController apiController = new ApiController(new ConnectionHandler(), new InLogger(), new OutLogger());
-		apiController.connect("127.0.0.1", 4002, 3, "");
+		apiController.connect("127.0.0.1", 4000, 3, "");
 
 		Contract contract = ContractSamples.SPXIndex();
-		Calendar from = Calendar.getInstance(TimeZone.getTimeZone("UTC"));
+		Calendar from = Calendar.getInstance(TimeZone.getTimeZone("America/New_York"));
 		from.set(2022, Calendar.JANUARY, 0, 0, 0, 0);
-		Calendar to = Calendar.getInstance(TimeZone.getTimeZone("UTC"));
+		Calendar to = Calendar.getInstance(TimeZone.getTimeZone("America/New_York"));
 		to.set(2023, 0, 0, 0, 0, 0);
 
 		HistoricalDataHandler historicalDataHandler = new HistoricalDataHandler(
@@ -30,6 +30,7 @@ public class Main {
 				contract,
 				true);
 		historicalDataHandler.fetchCandlesticks();
+		System.out.println("Done");
 	}
 }
 

@@ -115,7 +115,9 @@ public class HistoricalDataHandler implements ApiController.IHistoricalDataHandl
 			barTimestamp = barInstant.toString();
 		} catch (ParseException e) {
 			try {
-				barTimestamp = DATE_FORMAT.parse(bar.time()).toInstant().toString();
+				Date parsedDate = DATE_FORMAT.parse(bar.time());
+				parsedDate.setHours(18);
+				barTimestamp = parsedDate.toInstant().toString();
 			} catch (ParseException e2) {
 				throw new RuntimeException(e2);
 			}
