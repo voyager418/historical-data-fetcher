@@ -9,6 +9,8 @@ import java.text.SimpleDateFormat;
 import java.time.Instant;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.TimeZone;
 import java.util.concurrent.TimeUnit;
 
@@ -30,6 +32,7 @@ public class HistoricalDataHandler implements ApiController.IHistoricalDataHandl
 	private Calendar endDate;
 	private Calendar to;
 	private final Contract contract;
+	private final Map<String, Integer> hoursToAddForDate = new HashMap<>(); // to convert from UTC to New York time starting always at 9h30
 
 	public HistoricalDataHandler(ApiController apiController, Types.BarSize barSize, Types.WhatToShow whatToShow,
 			Calendar from, Calendar to, Contract contract, boolean shouldFetchRemainingData) throws IOException {
@@ -110,10 +113,20 @@ public class HistoricalDataHandler implements ApiController.IHistoricalDataHandl
 	@Override
 	public void historicalData(com.ib.client.Bar bar) {
 		try {
+			// the time is either between 6h30 -> 13h or 7h30 -> 14h
 			Instant barInstant = DATE_TIME_FORMAT.parse(bar.time()).toInstant();
-			barInstant = barInstant.plusSeconds(7200); // 2 hours to covert from UTC to New York time
+			String day = barInstant.toString().split("T")[0];
+			if (!hoursToAddForDate.containsKey(day)) {
+				if (barInstant.toString().contains("T06:")) {
+					hoursToAddForDate.put(day, 3);
+				} else if (barInstant.toString().contains("T07:")) {
+					hoursToAddForDate.put(day, 2);
+				}
+			}
+
+			barInstant = barInstant.plusSeconds(TimeUnit.HOURS.toSeconds(hoursToAddForDate.get(day)));
 			barTimestamp = barInstant.toString();
-		} catch (ParseException e) {
+		} catch (ParseException e) { // this is normal and happens if we fetch for daily candlesticks
 			try {
 				Date parsedDate = DATE_FORMAT.parse(bar.time());
 				parsedDate.setHours(18);

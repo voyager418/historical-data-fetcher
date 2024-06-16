@@ -19,18 +19,17 @@ public class Main {
 
 		Contract contract = ContractSamples.SPXIndex();
 		Calendar from = Calendar.getInstance(TimeZone.getTimeZone("America/New_York"));
-		from.set(2022, Calendar.JANUARY, 0, 0, 0, 0);
+		from.set(2021, Calendar.JANUARY, 0, 0, 0, 0);
 		Calendar to = Calendar.getInstance(TimeZone.getTimeZone("America/New_York"));
 		to.set(2023, 0, 0, 0, 0, 0);
 
 		HistoricalDataHandler historicalDataHandler = new HistoricalDataHandler(
 				apiController,
-				Types.BarSize._1_day,
+				Types.BarSize._5_mins,
 				Types.WhatToShow.TRADES, from, to,
 				contract,
 				true);
 		historicalDataHandler.fetchCandlesticks();
-		System.out.println("Done");
 	}
 }
 
