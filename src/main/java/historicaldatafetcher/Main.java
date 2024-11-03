@@ -9,7 +9,6 @@ import com.ib.client.Types;
 import com.ib.controller.ApiConnection;
 import com.ib.controller.ApiController;
 
-import samples.testbed.contracts.ContractSamples;
 
 public class Main {
 
@@ -17,19 +16,41 @@ public class Main {
 		ApiController apiController = new ApiController(new ConnectionHandler(), new InLogger(), new OutLogger());
 		apiController.connect("127.0.0.1", 4000, 3, "");
 
-		Contract contract = ContractSamples.SPXIndex();
+		Contract contract = spy();
 		Calendar from = Calendar.getInstance(TimeZone.getTimeZone("America/New_York"));
-		from.set(2021, Calendar.JANUARY, 0, 0, 0, 0);
+		from.set(2023, Calendar.JANUARY, 3, 0, 0, 0);
 		Calendar to = Calendar.getInstance(TimeZone.getTimeZone("America/New_York"));
-		to.set(2023, 0, 0, 0, 0, 0);
+		to.set(2024, Calendar.OCTOBER, 31, 0, 0, 0);
 
 		HistoricalDataHandler historicalDataHandler = new HistoricalDataHandler(
 				apiController,
-				Types.BarSize._5_mins,
+				Types.BarSize._1_min,
 				Types.WhatToShow.TRADES, from, to,
 				contract,
 				true);
 		historicalDataHandler.fetchCandlesticks();
+	}
+
+	public static Contract spx() {
+		//! [cashcontract]
+		Contract contract = new Contract();
+		contract.symbol("SPX");
+		contract.secType("IND");
+		contract.currency("USD");
+		contract.exchange("CBOE");
+		//! [cashcontract]
+		return contract;
+	}
+
+	public static Contract spy() {
+		//! [stkcontract]
+		Contract contract = new Contract();
+		contract.symbol("SPY");
+		contract.secType("STK");
+		contract.currency("USD");
+		contract.exchange("ARCA");
+		//! [stkcontract]
+		return contract;
 	}
 }
 

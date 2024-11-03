@@ -17,6 +17,7 @@ import java.util.concurrent.TimeUnit;
 import com.ib.client.Contract;
 import com.ib.client.Types;
 import com.ib.controller.ApiController;
+import com.ib.controller.Bar;
 import com.opencsv.CSVWriter;
 
 public class HistoricalDataHandler implements ApiController.IHistoricalDataHandler {
@@ -87,12 +88,15 @@ public class HistoricalDataHandler implements ApiController.IHistoricalDataHandl
 		int duration = getDifferenceOfDays(from.getTime(), to.getTime());
 		duration = duration >= 365 ? 1 : duration;
 		Types.DurationUnit durationUnit = Types.DurationUnit.DAY;
+		Calendar end = Calendar.getInstance(TimeZone.getTimeZone("America/New_York"));
+		end.set(to.getTime().getYear(), to.getTime().getMonth(), to.getTime().getDay(), 0, 0, 0);
 		if (duration == 1) {
 			durationUnit = Types.DurationUnit.YEAR;
+			end.set(from.getTime().getYear() + 1901, Calendar.JANUARY, 1, 0, 0, 0);
 		}
 
 		this.apiController.reqHistoricalData(contract,
-				DATE_TIME_FORMAT.format(to.getTime()) + " UTC",
+				DATE_TIME_FORMAT.format(end.getTime()) + " UTC",
 				duration,
 				durationUnit,
 				barSize,
@@ -101,7 +105,7 @@ public class HistoricalDataHandler implements ApiController.IHistoricalDataHandl
 	}
 
 	public static int getDifferenceOfDays(Date d1, Date d2) {
-		long diff = d2.getTime() - d1.getTime();
+		long diff = Math.abs(d2.getTime() - d1.getTime());
 		return (int) TimeUnit.DAYS.convert(diff, TimeUnit.MILLISECONDS);
 	}
 
@@ -111,16 +115,18 @@ public class HistoricalDataHandler implements ApiController.IHistoricalDataHandl
 	}
 
 	@Override
-	public void historicalData(com.ib.client.Bar bar) {
+	public void historicalData(Bar bar) {
 		try {
 			// the time is either between 6h30 -> 13h or 7h30 -> 14h
-			Instant barInstant = DATE_TIME_FORMAT.parse(bar.time()).toInstant();
+			Instant barInstant = DATE_TIME_FORMAT.parse(bar.timeStr()).toInstant();
 			String day = barInstant.toString().split("T")[0];
 			if (!hoursToAddForDate.containsKey(day)) {
 				if (barInstant.toString().contains("T06:")) {
 					hoursToAddForDate.put(day, 3);
 				} else if (barInstant.toString().contains("T07:")) {
 					hoursToAddForDate.put(day, 2);
+				} else if (barInstant.toString().contains("T08:")) {
+					hoursToAddForDate.put(day, 1);
 				}
 			}
 
@@ -128,7 +134,7 @@ public class HistoricalDataHandler implements ApiController.IHistoricalDataHandl
 			barTimestamp = barInstant.toString();
 		} catch (ParseException e) { // this is normal and happens if we fetch for daily candlesticks
 			try {
-				Date parsedDate = DATE_FORMAT.parse(bar.time());
+				Date parsedDate = DATE_FORMAT.parse(bar.timeStr());
 				parsedDate.setHours(18);
 				barTimestamp = parsedDate.toInstant().toString();
 			} catch (ParseException e2) {
