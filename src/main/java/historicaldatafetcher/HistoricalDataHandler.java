@@ -41,7 +41,7 @@ public class HistoricalDataHandler implements ApiController.IHistoricalDataHandl
 		this.barSize = barSize;
 		this.whatToShow = whatToShow;
 		this.from = from;
-		this.endDate = to;
+		this.endDate = from;
 		this.to = to;
 		this.contract = contract;
 		this.shouldFetchRemainingData = shouldFetchRemainingData;
@@ -65,6 +65,7 @@ public class HistoricalDataHandler implements ApiController.IHistoricalDataHandl
 			System.exit(0);
 		}
 
+		// continue fetching remaining
 		Timestamp lastFetchedTimestamp = Timestamp.from(Instant.parse(barTimestamp));
 		int duration = getDifferenceOfDays(new Date(lastFetchedTimestamp.getTime()), new Date(System.currentTimeMillis()));
 		if (duration > 356) {
@@ -73,7 +74,7 @@ public class HistoricalDataHandler implements ApiController.IHistoricalDataHandl
 		} else {
 			// current year
 			this.shouldFetchRemainingData = false;
-			endDate = Calendar.getInstance(TimeZone.getTimeZone("UTC"));
+			endDate.set(to.getTime().getYear(), to.getTime().getMonth(), to.getTime().getDay(), 0, 0, 0);
 		}
 		apiController.reqHistoricalData(this.contract,
 				DATE_TIME_FORMAT.format(endDate.getTime()) + " UTC",
@@ -88,15 +89,15 @@ public class HistoricalDataHandler implements ApiController.IHistoricalDataHandl
 		int duration = getDifferenceOfDays(from.getTime(), to.getTime());
 		duration = duration >= 365 ? 1 : duration;
 		Types.DurationUnit durationUnit = Types.DurationUnit.DAY;
-		Calendar end = Calendar.getInstance(TimeZone.getTimeZone("America/New_York"));
-		end.set(to.getTime().getYear(), to.getTime().getMonth(), to.getTime().getDay(), 0, 0, 0);
+		endDate = Calendar.getInstance(TimeZone.getTimeZone("America/New_York"));
+		endDate.set(to.getTime().getYear(), to.getTime().getMonth(), to.getTime().getDay(), 0, 0, 0);
 		if (duration == 1) {
 			durationUnit = Types.DurationUnit.YEAR;
-			end.set(from.getTime().getYear() + 1901, Calendar.JANUARY, 1, 0, 0, 0);
+			endDate.set(from.getTime().getYear() + 1901, Calendar.JANUARY, 1, 0, 0, 0);
 		}
 
 		this.apiController.reqHistoricalData(contract,
-				DATE_TIME_FORMAT.format(end.getTime()) + " UTC",
+				DATE_TIME_FORMAT.format(endDate.getTime()) + " UTC",
 				duration,
 				durationUnit,
 				barSize,
@@ -127,6 +128,8 @@ public class HistoricalDataHandler implements ApiController.IHistoricalDataHandl
 					hoursToAddForDate.put(day, 2);
 				} else if (barInstant.toString().contains("T08:")) {
 					hoursToAddForDate.put(day, 1);
+				} else {
+					hoursToAddForDate.put(day, 0);
 				}
 			}
 
