@@ -18,9 +18,9 @@ public class Main {
 
 		Contract contract = spy();
 		Calendar from = Calendar.getInstance(TimeZone.getTimeZone("America/New_York"));
-		from.set(2023, Calendar.JANUARY, 3, 0, 0, 0);
+		from.set(2024, Calendar.OCTOBER, 1, 0, 0, 0);
 		Calendar to = Calendar.getInstance(TimeZone.getTimeZone("America/New_York"));
-		to.set(2024, Calendar.OCTOBER, 31, 0, 0, 0);
+		to.set(2024, Calendar.NOVEMBER, 1, 0, 0, 0); // non inclusive
 
 		HistoricalDataHandler historicalDataHandler = new HistoricalDataHandler(
 				apiController,

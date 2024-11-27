@@ -74,7 +74,7 @@ public class HistoricalDataHandler implements ApiController.IHistoricalDataHandl
 		} else {
 			// current year
 			this.shouldFetchRemainingData = false;
-			endDate.set(to.getTime().getYear(), to.getTime().getMonth(), to.getTime().getDay(), 0, 0, 0);
+			endDate.set(to.getTime().getYear(), to.getTime().getMonth(), to.get(Calendar.DAY_OF_MONTH), 0, 0, 0);
 		}
 		apiController.reqHistoricalData(this.contract,
 				DATE_TIME_FORMAT.format(endDate.getTime()) + " UTC",
@@ -90,14 +90,14 @@ public class HistoricalDataHandler implements ApiController.IHistoricalDataHandl
 		duration = duration >= 365 ? 1 : duration;
 		Types.DurationUnit durationUnit = Types.DurationUnit.DAY;
 		endDate = Calendar.getInstance(TimeZone.getTimeZone("America/New_York"));
-		endDate.set(to.getTime().getYear(), to.getTime().getMonth(), to.getTime().getDay(), 0, 0, 0);
+		endDate.set(to.getTime().getYear() + 1900, to.getTime().getMonth(), to.get(Calendar.DAY_OF_MONTH), 0, 0, 0);
 		if (duration == 1) {
 			durationUnit = Types.DurationUnit.YEAR;
 			endDate.set(from.getTime().getYear() + 1901, Calendar.JANUARY, 1, 0, 0, 0);
 		}
 
 		this.apiController.reqHistoricalData(contract,
-				DATE_TIME_FORMAT.format(endDate.getTime()) + " UTC",
+				DATE_TIME_FORMAT.format(endDate.getTime()) + " UTC", // format is 20241031 15:59:00 UTC
 				duration,
 				durationUnit,
 				barSize,
