@@ -74,7 +74,7 @@ public class HistoricalDataHandler implements ApiController.IHistoricalDataHandl
 		} else {
 			// current year
 			this.shouldFetchRemainingData = false;
-			endDate.set(to.getTime().getYear(), to.getTime().getMonth(), to.get(Calendar.DAY_OF_MONTH), 0, 0, 0);
+			endDate.set(to.getTime().getYear() + 1900, to.getTime().getMonth(), to.get(Calendar.DAY_OF_MONTH), 0, 0, 0);
 		}
 		apiController.reqHistoricalData(this.contract,
 				DATE_TIME_FORMAT.format(endDate.getTime()) + " UTC",
