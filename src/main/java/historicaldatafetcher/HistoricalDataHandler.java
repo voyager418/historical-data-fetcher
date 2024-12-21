@@ -91,6 +91,7 @@ public class HistoricalDataHandler implements ApiController.IHistoricalDataHandl
 		Types.DurationUnit durationUnit = Types.DurationUnit.DAY;
 		endDate = Calendar.getInstance(TimeZone.getTimeZone("America/New_York"));
 		endDate.set(to.getTime().getYear() + 1900, to.getTime().getMonth(), to.get(Calendar.DAY_OF_MONTH), 0, 0, 0);
+		endDate.add(Calendar.DAY_OF_MONTH, 1);
 		if (duration == 1) {
 			durationUnit = Types.DurationUnit.YEAR;
 			endDate.set(from.getTime().getYear() + 1901, Calendar.JANUARY, 1, 0, 0, 0);
@@ -106,8 +107,32 @@ public class HistoricalDataHandler implements ApiController.IHistoricalDataHandl
 	}
 
 	public static int getDifferenceOfDays(Date d1, Date d2) {
-		long diff = Math.abs(d2.getTime() - d1.getTime());
-		return (int) TimeUnit.DAYS.convert(diff, TimeUnit.MILLISECONDS);
+		Calendar startCal = Calendar.getInstance();
+		Calendar endCal = Calendar.getInstance();
+
+		if (d1.after(d2)) {
+			// Swap dates if d1 is after d2
+			Date temp = d1;
+			d1 = d2;
+			d2 = temp;
+		}
+
+		startCal.setTime(d1);
+		endCal.setTime(d2);
+
+		int workingDays = 0;
+
+		// Iterate through each day in the range
+		while (startCal.before(endCal) || startCal.equals(endCal)) {
+			int dayOfWeek = startCal.get(Calendar.DAY_OF_WEEK);
+			if (dayOfWeek != Calendar.SATURDAY && dayOfWeek != Calendar.SUNDAY) {
+				workingDays++;
+			}
+			// Move to the next day
+			startCal.add(Calendar.DAY_OF_MONTH, 1);
+		}
+
+		return workingDays ;
 	}
 
 	private String getFileName(Contract contract, Types.BarSize barSize) {
