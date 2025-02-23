@@ -16,11 +16,11 @@ public class Main {
 		ApiController apiController = new ApiController(new ConnectionHandler(), new InLogger(), new OutLogger());
 		apiController.connect("127.0.0.1", 4000, 3, "");
 
-		Contract contract = spy();
+		Contract contract = spx();
 		Calendar from = Calendar.getInstance(TimeZone.getTimeZone("America/New_York"));
-		from.set(2024, Calendar.OCTOBER, 1, 0, 0, 0);
+		from.set(2023, Calendar.DECEMBER, 31, 0, 0, 0);
 		Calendar to = Calendar.getInstance(TimeZone.getTimeZone("America/New_York"));
-		to.set(2024, Calendar.NOVEMBER, 1, 0, 0, 0); // non inclusive
+		to.set(2025, Calendar.FEBRUARY, 14, 0, 0, 0); // non inclusive
 
 		HistoricalDataHandler historicalDataHandler = new HistoricalDataHandler(
 				apiController,
@@ -35,6 +35,17 @@ public class Main {
 		//! [cashcontract]
 		Contract contract = new Contract();
 		contract.symbol("SPX");
+		contract.secType("IND");
+		contract.currency("USD");
+		contract.exchange("CBOE");
+		//! [cashcontract]
+		return contract;
+	}
+
+	public static Contract vix() {
+		//! [cashcontract]
+		Contract contract = new Contract();
+		contract.symbol("VIX");
 		contract.secType("IND");
 		contract.currency("USD");
 		contract.exchange("CBOE");

@@ -10,7 +10,9 @@ import java.time.Instant;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 import java.util.TimeZone;
 import java.util.concurrent.TimeUnit;
 
@@ -34,6 +36,7 @@ public class HistoricalDataHandler implements ApiController.IHistoricalDataHandl
 	private Calendar to;
 	private final Contract contract;
 	private final Map<String, Integer> hoursToAddForDate = new HashMap<>(); // to convert from UTC to New York time starting always at 9h30
+	private final Set<String> fetchedTimestamps = new HashSet<>();
 
 	public HistoricalDataHandler(ApiController apiController, Types.BarSize barSize, Types.WhatToShow whatToShow,
 			Calendar from, Calendar to, Contract contract, boolean shouldFetchRemainingData) throws IOException {
@@ -86,7 +89,7 @@ public class HistoricalDataHandler implements ApiController.IHistoricalDataHandl
 	}
 
 	public void fetchCandlesticks() {
-		int duration = getDifferenceOfDays(from.getTime(), to.getTime());
+		int duration = getDifferenceOfDays(from.getTime(), to.getTime()) - 2;
 		duration = duration >= 365 ? 1 : duration;
 		Types.DurationUnit durationUnit = Types.DurationUnit.DAY;
 		endDate = Calendar.getInstance(TimeZone.getTimeZone("America/New_York"));
@@ -172,6 +175,8 @@ public class HistoricalDataHandler implements ApiController.IHistoricalDataHandl
 
 		String[] data = { barTimestamp, String.valueOf(bar.open()), String.valueOf(bar.high()), String.valueOf(bar.low()),
 				String.valueOf(bar.close()), String.valueOf(bar.volume()) };
-		writer.writeNext(data);
+		if (fetchedTimestamps.add(barTimestamp)) { // to avoid writing duplicates
+			writer.writeNext(data);
+		}
 	}
 }
