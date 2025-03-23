@@ -7,11 +7,17 @@ import java.sql.Timestamp;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.time.Instant;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.TimeZone;
 import java.util.concurrent.TimeUnit;
@@ -37,6 +43,9 @@ public class HistoricalDataHandler implements ApiController.IHistoricalDataHandl
 	private final Contract contract;
 	private final Map<String, Integer> hoursToAddForDate = new HashMap<>(); // to convert from UTC to New York time starting always at 9h30
 	private final Set<String> fetchedTimestamps = new HashSet<>();
+	private Instant previousInstant = Instant.MAX;
+	private Bar previousBar = null;
+	private LocalTime previousTime = null;
 
 	public HistoricalDataHandler(ApiController apiController, Types.BarSize barSize, Types.WhatToShow whatToShow,
 			Calendar from, Calendar to, Contract contract, boolean shouldFetchRemainingData) throws IOException {
@@ -145,19 +154,35 @@ public class HistoricalDataHandler implements ApiController.IHistoricalDataHandl
 
 	@Override
 	public void historicalData(Bar bar) {
+		Instant barInstant = null;
 		try {
 			// the time is either between 6h30 -> 13h or 7h30 -> 14h
-			Instant barInstant = DATE_TIME_FORMAT.parse(bar.timeStr()).toInstant();
+			barInstant = DATE_TIME_FORMAT.parse(bar.timeStr()).toInstant();
 			String day = barInstant.toString().split("T")[0];
-			if (!hoursToAddForDate.containsKey(day)) {
-				if (barInstant.toString().contains("T06:")) {
-					hoursToAddForDate.put(day, 3);
-				} else if (barInstant.toString().contains("T07:")) {
-					hoursToAddForDate.put(day, 2);
-				} else if (barInstant.toString().contains("T08:")) {
-					hoursToAddForDate.put(day, 1);
-				} else {
-					hoursToAddForDate.put(day, 0);
+            if (!Objects.equals(contract.symbol(), "VIX")) {
+                if (!hoursToAddForDate.containsKey(day)) {
+                    if (barInstant.toString().contains("T06:")) {
+                        hoursToAddForDate.put(day, 3);
+                    } else if (barInstant.toString().contains("T07:")) {
+                        hoursToAddForDate.put(day, 2);
+                    } else if (barInstant.toString().contains("T08:")) {
+                        hoursToAddForDate.put(day, 1);
+                    } else {
+                        hoursToAddForDate.put(day, 0);
+                    }
+                }
+            } else {
+				// for vix (hours are between 3:15AM and 16h)
+				if (!hoursToAddForDate.containsKey(day)) {
+					if (barInstant.toString().contains("T00:15")) {
+						hoursToAddForDate.put(day, 3);
+					} else if (barInstant.toString().contains("T01:15")) {
+						hoursToAddForDate.put(day, 2);
+					} else if (barInstant.toString().contains("T02:15")) {
+						hoursToAddForDate.put(day, 1);
+					} else {
+						hoursToAddForDate.put(day, 0);
+					}
 				}
 			}
 
@@ -173,10 +198,70 @@ public class HistoricalDataHandler implements ApiController.IHistoricalDataHandl
 			}
 		}
 
+		if (Objects.equals(contract.symbol(), "VIX")) {
+			DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss'Z'");
+			LocalTime time = LocalDateTime.parse(barTimestamp, formatter).toLocalTime();
+			if (time.isAfter(LocalTime.of(15, 59))) {
+				return;
+			}
+			if (time.isBefore(LocalTime.of(9, 30))) {
+				return;
+			}
+			previousTime = time;
+			// to fill beginning missing data (problem with IBKR not with us)
+			LocalTime tempTime = LocalTime.of(9, 30);
+			boolean prev = false;
+			while (!tempTime.equals(time)) {
+				String timestamp = getTimestamp(barInstant, tempTime);
+				if (!fetchedTimestamps.contains(timestamp)) {
+					String[] data = { timestamp, String.valueOf(bar.open()), String.valueOf(bar.high()), String.valueOf(bar.low()),
+							String.valueOf(bar.close()), String.valueOf(bar.volume()) };
+					if (fetchedTimestamps.add(timestamp)) { // to avoid writing duplicates
+						writer.writeNext(data);
+					}
+					prev = true;
+				}
+				tempTime = tempTime.plusMinutes(1);
+			}
+			// to fill ending missing data
+			if (!prev && previousInstant != Instant.MAX && !barInstant.atZone(ZoneId.systemDefault()).toLocalDate().equals(
+				previousInstant.atZone(ZoneId.systemDefault()).toLocalDate()) &&
+				(previousTime.getHour() != 15 || previousTime.getMinute() != 59)) {
+				tempTime = LocalTime.of(previousTime.getHour(), previousTime.getMinute());
+				tempTime = tempTime.plusMinutes(1);
+				while (!tempTime.equals(LocalTime.of(16, 0))) {
+					String timestamp = getTimestamp(previousInstant, tempTime);
+					if (!fetchedTimestamps.contains(timestamp)) {
+						String[] data = { timestamp, String.valueOf(previousBar.open()), String.valueOf(previousBar.high()), String.valueOf(previousBar.low()),
+								String.valueOf(previousBar.close()), String.valueOf(previousBar.volume()) };
+						if (fetchedTimestamps.add(timestamp)) { // to avoid writing duplicates
+							writer.writeNext(data);
+						}
+					}
+					tempTime = tempTime.plusMinutes(1);
+				}
+			}
+		}
 		String[] data = { barTimestamp, String.valueOf(bar.open()), String.valueOf(bar.high()), String.valueOf(bar.low()),
 				String.valueOf(bar.close()), String.valueOf(bar.volume()) };
+
 		if (fetchedTimestamps.add(barTimestamp)) { // to avoid writing duplicates
 			writer.writeNext(data);
 		}
+		previousInstant = barInstant;
+		previousBar = bar;
+	}
+
+	private String getTimestamp(Instant instant, LocalTime time) {
+		LocalDate localDate = instant.atZone(ZoneId.systemDefault()).toLocalDate();
+
+		// Combine LocalDate and LocalTime to form LocalDateTime
+		LocalDateTime dateTime = LocalDateTime.of(localDate, time);
+
+		// Define formatter for barTimestamp format
+		DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss'Z'");
+
+		// Format as barTimestamp string
+		return dateTime.format(formatter);
 	}
 }
