@@ -16,15 +16,15 @@ public class Main {
 		ApiController apiController = new ApiController(new ConnectionHandler(), new InLogger(), new OutLogger());
 		apiController.connect("127.0.0.1", 4000, 3, "");
 
-		Contract contract = spx();
+		Contract contract = vix();
 		Calendar from = Calendar.getInstance(TimeZone.getTimeZone("America/New_York"));
-		from.set(2023, Calendar.DECEMBER, 31, 0, 0, 0);
+		from.set(2024, Calendar.DECEMBER, 10, 0, 0, 0);
 		Calendar to = Calendar.getInstance(TimeZone.getTimeZone("America/New_York"));
-		to.set(2025, Calendar.FEBRUARY, 14, 0, 0, 0); // non inclusive
+		to.set(2025, Calendar.JANUARY, 3, 0, 0, 0); // non inclusive
 
 		HistoricalDataHandler historicalDataHandler = new HistoricalDataHandler(
 				apiController,
-				Types.BarSize._1_min,
+				Types.BarSize._2_hours,
 				Types.WhatToShow.TRADES, from, to,
 				contract,
 				true);

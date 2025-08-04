@@ -94,7 +94,7 @@ public class HistoricalDataHandler implements ApiController.IHistoricalDataHandl
 				duration > 365 ? Types.DurationUnit.YEAR : Types.DurationUnit.DAY,
 				this.barSize,
 				whatToShow,
-				true, false, this);
+				false, false, this);
 	}
 
 	public void fetchCandlesticks() {
@@ -115,7 +115,7 @@ public class HistoricalDataHandler implements ApiController.IHistoricalDataHandl
 				durationUnit,
 				barSize,
 				whatToShow,
-				true, false, this);
+				false, false, this);
 	}
 
 	public static int getDifferenceOfDays(Date d1, Date d2) {
@@ -159,19 +159,31 @@ public class HistoricalDataHandler implements ApiController.IHistoricalDataHandl
 			// the time is either between 6h30 -> 13h or 7h30 -> 14h
 			barInstant = DATE_TIME_FORMAT.parse(bar.timeStr()).toInstant();
 			String day = barInstant.toString().split("T")[0];
-            if (!Objects.equals(contract.symbol(), "VIX")) {
+            if (Objects.equals(contract.symbol(), "SPX")) {
                 if (!hoursToAddForDate.containsKey(day)) {
-                    if (barInstant.toString().contains("T06:")) {
-                        hoursToAddForDate.put(day, 3);
-                    } else if (barInstant.toString().contains("T07:")) {
-                        hoursToAddForDate.put(day, 2);
-                    } else if (barInstant.toString().contains("T08:")) {
-                        hoursToAddForDate.put(day, 1);
-                    } else {
-                        hoursToAddForDate.put(day, 0);
-                    }
-                }
-            } else {
+					if (barInstant.toString().contains("T06:")) {
+						hoursToAddForDate.put(day, 3);
+					} else if (barInstant.toString().contains("T07:")) {
+						hoursToAddForDate.put(day, 2);
+					} else if (barInstant.toString().contains("T08:")) {
+						hoursToAddForDate.put(day, 1);
+					} else {
+						hoursToAddForDate.put(day, 0);
+					}
+				}
+			} else if (Objects.equals(contract.symbol(), "SPY")) {
+				if (!hoursToAddForDate.containsKey(day)) {
+					if (barInstant.toString().contains("T01:")) {
+						hoursToAddForDate.put(day, 3);
+					} else if (barInstant.toString().contains("T02:")) {
+						hoursToAddForDate.put(day, 2);
+					} else if (barInstant.toString().contains("T03:")) {
+						hoursToAddForDate.put(day, 1);
+					} else {
+						hoursToAddForDate.put(day, 0);
+					}
+			}
+			} else {
 				// for vix (hours are between 3:15AM and 16h)
 				if (!hoursToAddForDate.containsKey(day)) {
 					if (barInstant.toString().contains("T00:15")) {
@@ -198,43 +210,43 @@ public class HistoricalDataHandler implements ApiController.IHistoricalDataHandl
 			}
 		}
 
-		if (Objects.equals(contract.symbol(), "VIX")) {
+		if (Objects.equals(contract.symbol(), "VIX") || Objects.equals(contract.symbol(), "SPY")) {
 			DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss'Z'");
 			LocalTime time = LocalDateTime.parse(barTimestamp, formatter).toLocalTime();
-			if (time.isAfter(LocalTime.of(15, 59))) {
-				return;
-			}
-			if (time.isBefore(LocalTime.of(9, 30))) {
+//			if (time.isAfter(LocalTime.of(15, 59))) {
+//				return;
+//			}
+			if (time.isBefore(LocalTime.of(4, 0))) {
 				return;
 			}
 			previousTime = time;
 			// to fill beginning missing data (problem with IBKR not with us)
-			LocalTime tempTime = LocalTime.of(9, 30);
+			LocalTime tempTime = LocalTime.of(4, 0);
 			boolean prev = false;
 			while (!tempTime.equals(time)) {
 				String timestamp = getTimestamp(barInstant, tempTime);
 				if (!fetchedTimestamps.contains(timestamp)) {
-					String[] data = { timestamp, String.valueOf(bar.open()), String.valueOf(bar.high()), String.valueOf(bar.low()),
-							String.valueOf(bar.close()), String.valueOf(bar.volume()) };
 					if (fetchedTimestamps.add(timestamp)) { // to avoid writing duplicates
+						String[] data = { timestamp, String.valueOf(bar.open()), String.valueOf(bar.high()), String.valueOf(bar.low()),
+								String.valueOf(bar.close()), String.valueOf(bar.volume()) };
 						writer.writeNext(data);
 					}
 					prev = true;
 				}
 				tempTime = tempTime.plusMinutes(1);
 			}
-			// to fill ending missing data
+//			 to fill ending missing data
 			if (!prev && previousInstant != Instant.MAX && !barInstant.atZone(ZoneId.systemDefault()).toLocalDate().equals(
 				previousInstant.atZone(ZoneId.systemDefault()).toLocalDate()) &&
-				(previousTime.getHour() != 15 || previousTime.getMinute() != 59)) {
+				(previousTime.getHour() != 19 || previousTime.getMinute() != 59)) {
 				tempTime = LocalTime.of(previousTime.getHour(), previousTime.getMinute());
 				tempTime = tempTime.plusMinutes(1);
-				while (!tempTime.equals(LocalTime.of(16, 0))) {
+				while (!tempTime.equals(LocalTime.of(20, 0))) {
 					String timestamp = getTimestamp(previousInstant, tempTime);
 					if (!fetchedTimestamps.contains(timestamp)) {
-						String[] data = { timestamp, String.valueOf(previousBar.open()), String.valueOf(previousBar.high()), String.valueOf(previousBar.low()),
-								String.valueOf(previousBar.close()), String.valueOf(previousBar.volume()) };
 						if (fetchedTimestamps.add(timestamp)) { // to avoid writing duplicates
+							String[] data = { timestamp, String.valueOf(previousBar.open()), String.valueOf(previousBar.high()), String.valueOf(previousBar.low()),
+									String.valueOf(previousBar.close()), String.valueOf(previousBar.volume()) };
 							writer.writeNext(data);
 						}
 					}
