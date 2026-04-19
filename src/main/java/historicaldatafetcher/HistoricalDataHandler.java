@@ -69,6 +69,7 @@ public class HistoricalDataHandler implements ApiController.IHistoricalDataHandl
 	public void historicalDataEnd() {
 		if (!this.shouldFetchRemainingData ||
 				getDifferenceOfDays(new Date(Timestamp.from(Instant.parse(barTimestamp)).getTime()), this.to.getTime()) <= 5) {
+			flushPendingSessionTail();
 			try {
 				writer.close();
 			} catch (IOException e) {
@@ -235,23 +236,11 @@ public class HistoricalDataHandler implements ApiController.IHistoricalDataHandl
 				}
 				tempTime = tempTime.plusMinutes(1);
 			}
-//			 to fill ending missing data
+			// to fill ending missing data
 			if (!prev && previousInstant != Instant.MAX && !barInstant.atZone(ZoneId.systemDefault()).toLocalDate().equals(
-				previousInstant.atZone(ZoneId.systemDefault()).toLocalDate()) &&
-				(previousTime.getHour() != 19 || previousTime.getMinute() != 59)) {
-				tempTime = LocalTime.of(previousTime.getHour(), previousTime.getMinute());
-				tempTime = tempTime.plusMinutes(1);
-				while (!tempTime.equals(LocalTime.of(20, 0))) {
-					String timestamp = getTimestamp(previousInstant, tempTime);
-					if (!fetchedTimestamps.contains(timestamp)) {
-						if (fetchedTimestamps.add(timestamp)) { // to avoid writing duplicates
-							String[] data = { timestamp, String.valueOf(previousBar.open()), String.valueOf(previousBar.high()), String.valueOf(previousBar.low()),
-									String.valueOf(previousBar.close()), String.valueOf(previousBar.volume()) };
-							writer.writeNext(data);
-						}
-					}
-					tempTime = tempTime.plusMinutes(1);
-				}
+					previousInstant.atZone(ZoneId.systemDefault()).toLocalDate()) &&
+					(previousTime.getHour() != 19 || previousTime.getMinute() != 59)) {
+				fillMissingEndOfDay(previousInstant, previousBar, previousTime);
 			}
 		}
 		String[] data = { barTimestamp, String.valueOf(bar.open()), String.valueOf(bar.high()), String.valueOf(bar.low()),
@@ -275,5 +264,35 @@ public class HistoricalDataHandler implements ApiController.IHistoricalDataHandl
 
 		// Format as barTimestamp string
 		return dateTime.format(formatter);
+	}
+
+	private void flushPendingSessionTail() {
+		if (!(Objects.equals(contract.symbol(), "VIX") || Objects.equals(contract.symbol(), "SPY"))) {
+			return;
+		}
+		if (previousInstant == Instant.MAX || previousBar == null || previousTime == null) {
+			return;
+		}
+
+		fillMissingEndOfDay(previousInstant, previousBar, previousTime);
+	}
+
+	private void fillMissingEndOfDay(Instant instant, Bar bar, LocalTime lastObservedTime) {
+		if (lastObservedTime.getHour() == 19 && lastObservedTime.getMinute() == 59) {
+			return;
+		}
+
+		LocalTime tempTime = LocalTime.of(lastObservedTime.getHour(), lastObservedTime.getMinute()).plusMinutes(1);
+		while (!tempTime.equals(LocalTime.of(20, 0))) {
+			String timestamp = getTimestamp(instant, tempTime);
+			if (!fetchedTimestamps.contains(timestamp)) {
+				if (fetchedTimestamps.add(timestamp)) { // to avoid writing duplicates
+					String[] data = { timestamp, String.valueOf(bar.open()), String.valueOf(bar.high()), String.valueOf(bar.low()),
+							String.valueOf(bar.close()), String.valueOf(bar.volume()) };
+					writer.writeNext(data);
+				}
+			}
+			tempTime = tempTime.plusMinutes(1);
+		}
 	}
 }

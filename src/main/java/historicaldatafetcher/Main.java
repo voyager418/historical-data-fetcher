@@ -18,13 +18,13 @@ public class Main {
 
 		Contract contract = vix();
 		Calendar from = Calendar.getInstance(TimeZone.getTimeZone("America/New_York"));
-		from.set(2024, Calendar.DECEMBER, 10, 0, 0, 0);
+		from.set(2026, Calendar.MARCH, 19, 0, 0, 0);
 		Calendar to = Calendar.getInstance(TimeZone.getTimeZone("America/New_York"));
-		to.set(2025, Calendar.JANUARY, 3, 0, 0, 0); // non inclusive
+		to.set(2026, Calendar.APRIL, 17, 0, 0, 0);
 
 		HistoricalDataHandler historicalDataHandler = new HistoricalDataHandler(
 				apiController,
-				Types.BarSize._2_hours,
+				Types.BarSize._1_min,
 				Types.WhatToShow.TRADES, from, to,
 				contract,
 				true);
