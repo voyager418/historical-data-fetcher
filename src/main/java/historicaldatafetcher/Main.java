@@ -14,13 +14,13 @@ public class Main {
 
 	public static void main(String[] args) throws Exception {
 		ApiController apiController = new ApiController(new ConnectionHandler(), new InLogger(), new OutLogger());
-		apiController.connect("127.0.0.1", 4000, 3, "");
+		apiController.connect("127.0.0.1", 4002, 3, "");
 
 		Contract contract = spx();
 		Calendar from = Calendar.getInstance(TimeZone.getTimeZone("America/New_York"));
-		from.set(2023, Calendar.DECEMBER, 31, 0, 0, 0);
+		from.set(2026, Calendar.JULY, 2, 0, 0, 0);
 		Calendar to = Calendar.getInstance(TimeZone.getTimeZone("America/New_York"));
-		to.set(2025, Calendar.FEBRUARY, 14, 0, 0, 0); // non inclusive
+		to.set(2026, Calendar.JULY, 31, 0, 0, 0); // non inclusive
 
 		HistoricalDataHandler historicalDataHandler = new HistoricalDataHandler(
 				apiController,
@@ -42,6 +42,15 @@ public class Main {
 		return contract;
 	}
 
+	public static Contract rut() {
+		Contract contract = new Contract();
+		contract.symbol("RUT");
+		contract.secType("IND");
+		contract.currency("USD");
+		contract.exchange("RUSSELL");
+		return contract;
+	}
+
 	public static Contract vix() {
 		//! [cashcontract]
 		Contract contract = new Contract();
@@ -57,6 +66,17 @@ public class Main {
 		//! [stkcontract]
 		Contract contract = new Contract();
 		contract.symbol("SPY");
+		contract.secType("STK");
+		contract.currency("USD");
+		contract.exchange("ARCA");
+		//! [stkcontract]
+		return contract;
+	}
+
+	public static Contract iwm() {
+		//! [stkcontract]
+		Contract contract = new Contract();
+		contract.symbol("IWM");
 		contract.secType("STK");
 		contract.currency("USD");
 		contract.exchange("ARCA");
