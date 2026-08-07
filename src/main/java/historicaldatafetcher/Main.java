@@ -14,13 +14,13 @@ public class Main {
 
 	public static void main(String[] args) throws Exception {
 		ApiController apiController = new ApiController(new ConnectionHandler(), new InLogger(), new OutLogger());
-		apiController.connect("127.0.0.1", 4000, 3, "");
+		apiController.connect("127.0.0.1", 4002, 3, "");
 
 		Contract contract = vix();
 		Calendar from = Calendar.getInstance(TimeZone.getTimeZone("America/New_York"));
-		from.set(2026, Calendar.MARCH, 19, 0, 0, 0);
+		from.set(2026, Calendar.JULY, 2, 0, 0, 0);
 		Calendar to = Calendar.getInstance(TimeZone.getTimeZone("America/New_York"));
-		to.set(2026, Calendar.APRIL, 17, 0, 0, 0);
+		to.set(2026, Calendar.JULY, 31, 0, 0, 0); // non inclusive
 
 		HistoricalDataHandler historicalDataHandler = new HistoricalDataHandler(
 				apiController,
